@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 import {
   CheckCircle,
   Circle,
@@ -18,7 +18,7 @@ export default function SetupPage() {
   const [barberExists, setBarberExists] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     checkSetupStatus();

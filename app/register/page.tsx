@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Loader2 } from "lucide-react";
 
@@ -16,7 +16,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
 
   // Step 2: Barber info
-  const [shopName, setShopName] = useState("Luccifadez");
+  const [shopName, setShopName] = useState("");
+  const [slug, setSlug] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
@@ -25,7 +26,20 @@ export default function RegisterPage() {
   const [travelEnabled, setTravelEnabled] = useState(false);
 
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
+
+  // Auto-generate slug from shop name
+  useEffect(() => {
+    if (shopName && !slug) {
+      const generatedSlug = shopName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim();
+      setSlug(generatedSlug);
+    }
+  }, [shopName, slug]);
 
   async function handleAuthSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,9 +76,10 @@ export default function RegisterPage() {
 
     try {
       // Insert barber profile
+      // @ts-expect-error - Supabase types not fully generated yet
       const { error: barberError } = await supabase.from("barbers").insert({
         user_id: userId,
-        slug: "luccifadez",
+        slug: slug,
         shop_name: shopName,
         address,
         city,
@@ -93,9 +108,9 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">🚀 Registrera Luccifadez</h1>
+          <h1 className="text-4xl font-bold mb-2">🚀 Create Your Barbershop</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Skapa ditt konto och sätt upp din salong
+            Join LubooKing and start accepting bookings today
           </p>
         </div>
 
@@ -177,12 +192,12 @@ export default function RegisterPage() {
           {step === 2 && (
             <form onSubmit={handleBarberSubmit} className="space-y-4">
               <h2 className="text-2xl font-bold mb-4">
-                Steg 2: Salonguppgifter
+                Step 2: Barbershop Details
               </h2>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Salongnamn
+                  Shop Name
                 </label>
                 <input
                   type="text"
@@ -190,50 +205,82 @@ export default function RegisterPage() {
                   onChange={(e) => setShopName(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
                   required
+                  placeholder="e.g. The Classic Barbershop"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Adress</label>
+                <label className="block text-sm font-medium mb-2">
+                  URL Slug{" "}
+                  <span className="text-gray-500">
+                    (Your unique booking link)
+                  </span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">
+                    lubooking.com/barbers/
+                  </span>
+                  <input
+                    type="text"
+                    value={slug}
+                    onChange={(e) => {
+                      const value = e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, "");
+                      setSlug(value);
+                    }}
+                    className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
+                    required
+                    placeholder="your-shop-name"
+                    pattern="[a-z0-9-]+"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Only lowercase letters, numbers, and hyphens
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Address
+                </label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
                   required
-                  placeholder="Storgatan 12"
+                  placeholder="123 Main Street"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Stad</label>
+                <label className="block text-sm font-medium mb-2">City</label>
                 <input
                   type="text"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
                   required
-                  placeholder="Stockholm"
+                  placeholder="New York"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Telefon
-                </label>
+                <label className="block text-sm font-medium mb-2">Phone</label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
                   required
-                  placeholder="+46 70 123 45 67"
+                  placeholder="+1 555 123 4567"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Kontakt-email
+                  Contact Email
                 </label>
                 <input
                   type="email"
@@ -246,7 +293,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Beskrivning
+                  Description
                 </label>
                 <textarea
                   value={bio}
@@ -254,7 +301,7 @@ export default function RegisterPage() {
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
                   rows={3}
                   required
-                  placeholder="Välkommen till Luccifadez - Stockholms modernaste barbersalong..."
+                  placeholder="Welcome to our barbershop - providing premium cuts and grooming services..."
                 />
               </div>
 
@@ -267,7 +314,7 @@ export default function RegisterPage() {
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-600"
                 />
                 <label htmlFor="travel" className="text-sm">
-                  Erbjuder hembesök
+                  Offer mobile services (at-home visits)
                 </label>
               </div>
 
@@ -285,10 +332,10 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Skapar profil...
+                    Creating profile...
                   </>
                 ) : (
-                  "Slutför registrering"
+                  "Complete Registration"
                 )}
               </button>
             </form>
@@ -297,14 +344,15 @@ export default function RegisterPage() {
           {step === 3 && (
             <div className="text-center py-8">
               <CheckCircle className="h-20 w-20 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold mb-2">🎉 Klart!</h2>
+              <h2 className="text-2xl font-bold mb-2">🎉 Success!</h2>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Din salong är nu registrerad. Du omdirigeras till dashboard...
+                Your barbershop is now registered. Redirecting to your
+                dashboard...
               </p>
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                 <span className="text-sm text-gray-500">
-                  Laddar dashboard...
+                  Loading dashboard...
                 </span>
               </div>
             </div>
