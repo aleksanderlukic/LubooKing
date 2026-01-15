@@ -17,7 +17,7 @@ export function Header() {
             {IS_MARKETPLACE_MODE ? (
               <>
                 <Image
-                  src="/lubooking-logo.png"
+                  src="/lubooking-logo.svg"
                   alt="LubooKing Logo"
                   width={40}
                   height={40}
