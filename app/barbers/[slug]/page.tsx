@@ -89,14 +89,20 @@ export default async function BarberProfilePage({
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
             <div className="flex items-start gap-3">
               <span className="text-2xl">🎨</span>
-              <div>
+              <div className="flex-1">
                 <h3 className="font-bold text-blue-900 dark:text-blue-200 mb-1">
                   Demo Mode Active
                 </h3>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
                   You're viewing demo data. Connect a Supabase database to
                   enable real bookings and customize your content.
                 </p>
+                <a
+                  href="/setup"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 underline"
+                >
+                  🚀 Start Setup Guide
+                </a>
               </div>
             </div>
           </div>

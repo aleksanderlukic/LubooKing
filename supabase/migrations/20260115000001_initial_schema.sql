@@ -1,9 +1,9 @@
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
 
 -- Create barbers table
-CREATE TABLE barbers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS barbers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   slug TEXT UNIQUE NOT NULL,
   shop_name TEXT NOT NULL,
@@ -21,8 +21,8 @@ CREATE TABLE barbers (
 );
 
 -- Create services table
-CREATE TABLE services (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   barber_id UUID REFERENCES barbers(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0),
@@ -33,8 +33,8 @@ CREATE TABLE services (
 );
 
 -- Create availability table
-CREATE TABLE availability (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS availability (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   barber_id UUID REFERENCES barbers(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
   start_time TIME NOT NULL,
@@ -46,8 +46,8 @@ CREATE TABLE availability (
 );
 
 -- Create bookings table
-CREATE TABLE bookings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   barber_id UUID REFERENCES barbers(id) ON DELETE CASCADE NOT NULL,
   service_id UUID REFERENCES services(id) ON DELETE CASCADE NOT NULL,
   starts_at TIMESTAMPTZ NOT NULL,
@@ -68,8 +68,8 @@ CREATE TABLE bookings (
 );
 
 -- Create payments table
-CREATE TABLE payments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE NOT NULL,
   provider TEXT NOT NULL,
   provider_payment_id TEXT,
@@ -81,8 +81,8 @@ CREATE TABLE payments (
 );
 
 -- Create notification subscriptions table
-CREATE TABLE notification_subscriptions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS notification_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   barber_id UUID REFERENCES barbers(id) ON DELETE CASCADE NOT NULL,
   subscriber_email TEXT NOT NULL,
   active BOOLEAN DEFAULT true,
@@ -91,8 +91,8 @@ CREATE TABLE notification_subscriptions (
 );
 
 -- Create gallery images table
-CREATE TABLE gallery_images (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS gallery_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   barber_id UUID REFERENCES barbers(id) ON DELETE CASCADE NOT NULL,
   image_url TEXT NOT NULL,
   display_order INTEGER DEFAULT 0,
