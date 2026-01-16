@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CheckCircle, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -50,13 +51,13 @@ export default function RegisterPage() {
 
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError("Lösenorden matchar inte");
+      setError("Passwords do not match");
       setLoading(false);
       return;
     }
 
     try {
-      // Sign up user
+      // Try to sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -65,7 +66,60 @@ export default function RegisterPage() {
         },
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        // If email already exists, try to sign in and check if they have a barber profile
+        if (
+          authError.message?.includes("already registered") ||
+          authError.message?.includes("User already registered")
+        ) {
+          // Try to sign in with the provided credentials
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+          if (signInError) {
+            setError(
+              "This email is already registered. Please check your password or go to login."
+            );
+            setLoading(false);
+            return;
+          }
+
+          if (!signInData.user) {
+            setError("Failed to authenticate");
+            setLoading(false);
+            return;
+          }
+
+          // Check if user already has a barber profile
+          // @ts-expect-error - Supabase types not fully generated yet
+          const { data: existingBarber } = await supabase
+            .from("barbers")
+            .select("id, slug, shop_name")
+            .eq("user_id", signInData.user.id)
+            .single();
+
+          if (existingBarber) {
+            setError(
+              `You already have a registered barbershop: ${existingBarber.shop_name} (${existingBarber.slug})`
+            );
+            setLoading(false);
+            return;
+          }
+
+          // User exists but has no barber profile - let them continue
+          setUserId(signInData.user.id);
+          setContactEmail(email);
+          setStep(2);
+          setLoading(false);
+          return;
+        } else {
+          throw authError;
+        }
+      }
+
       if (!authData.user) throw new Error("No user returned");
 
       setUserId(authData.user.id);
@@ -84,36 +138,79 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      // Insert barber profile
+      // Check if a barber profile already exists for this user
       // @ts-expect-error - Supabase types not fully generated yet
-      const { error: barberError } = await supabase.from("barbers").insert({
-        user_id: userId,
-        slug: slug,
-        shop_name: shopName,
-        address,
-        postal_code: postalCode,
-        city,
-        phone,
-        email: contactEmail,
-        bio,
-        travel_enabled: travelEnabled,
-      });
+      const { data: existingBarber } = await supabase
+        .from("barbers")
+        .select("id, slug")
+        .eq("user_id", userId)
+        .single();
 
-      if (barberError) {
-        // Handle duplicate slug error
-        if (
-          barberError.message?.includes("duplicate key value") &&
-          barberError.message?.includes("slug")
-        ) {
-          setError("Detta URL-namn är redan upptaget. Välj ett annat slug.");
-        } else {
-          throw barberError;
+      if (existingBarber) {
+        // User already has a barber profile - update it
+        // @ts-expect-error - Supabase types not fully generated yet
+        const { error: updateError } = await supabase
+          .from("barbers")
+          .update({
+            slug: slug,
+            shop_name: shopName,
+            address,
+            postal_code: postalCode,
+            city,
+            phone,
+            email: contactEmail,
+            bio,
+            travel_enabled: travelEnabled,
+          })
+          .eq("user_id", userId);
+
+        if (updateError) {
+          // Handle duplicate slug error (someone else has this slug)
+          if (
+            updateError.message?.includes("duplicate key value") &&
+            updateError.message?.includes("slug")
+          ) {
+            setError(
+              "This URL slug is already taken by another barbershop. Please choose another one."
+            );
+          } else {
+            throw updateError;
+          }
+          setLoading(false);
+          return;
         }
-        setLoading(false);
-        return;
-      }
+      } else {
+        // No existing profile - create new one
+        // @ts-expect-error - Supabase types not fully generated yet
+        const { error: insertError } = await supabase.from("barbers").insert({
+          user_id: userId,
+          slug: slug,
+          shop_name: shopName,
+          address,
+          postal_code: postalCode,
+          city,
+          phone,
+          email: contactEmail,
+          bio,
+          travel_enabled: travelEnabled,
+        });
 
-      if (barberError) throw barberError;
+        if (insertError) {
+          // Handle duplicate slug error
+          if (
+            insertError.message?.includes("duplicate key value") &&
+            insertError.message?.includes("slug")
+          ) {
+            setError(
+              "This URL slug is already taken by another barbershop. Please choose another one."
+            );
+          } else {
+            throw insertError;
+          }
+          setLoading(false);
+          return;
+        }
+      }
 
       // Success! Redirect to dashboard
       setStep(3);
@@ -207,7 +304,15 @@ export default function RegisterPage() {
 
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
-                  {error}
+                  <p>{error}</p>
+                  {error.includes("already registered") && (
+                    <Link
+                      href="/login"
+                      className="underline font-medium mt-2 inline-block"
+                    >
+                      Go to login →
+                    </Link>
+                  )}
                 </div>
               )}
 
