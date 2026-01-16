@@ -14,11 +14,13 @@ export default function RegisterPage() {
   // Step 1: Auth
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Step 2: Barber info
   const [shopName, setShopName] = useState("");
   const [slug, setSlug] = useState("");
   const [address, setAddress] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -45,6 +47,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Lösenorden matchar inte");
+      setLoading(false);
+      return;
+    }
 
     try {
       // Sign up user
@@ -82,12 +91,27 @@ export default function RegisterPage() {
         slug: slug,
         shop_name: shopName,
         address,
+        postal_code: postalCode,
         city,
         phone,
         email: contactEmail,
         bio,
         travel_enabled: travelEnabled,
       });
+
+      if (barberError) {
+        // Handle duplicate slug error
+        if (
+          barberError.message?.includes("duplicate key value") &&
+          barberError.message?.includes("slug")
+        ) {
+          setError("Detta URL-namn är redan upptaget. Välj ett annat slug.");
+        } else {
+          throw barberError;
+        }
+        setLoading(false);
+        return;
+      }
 
       if (barberError) throw barberError;
 
@@ -163,6 +187,21 @@ export default function RegisterPage() {
                   required
                   minLength={6}
                   placeholder="Minst 6 tecken"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Bekräfta lösenord
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
+                  required
+                  minLength={6}
+                  placeholder="Upprepa lösenordet"
                 />
               </div>
 
@@ -251,6 +290,20 @@ export default function RegisterPage() {
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
                   required
                   placeholder="123 Main Street"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Postal Code
+                </label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
+                  required
+                  placeholder="12345"
                 />
               </div>
 

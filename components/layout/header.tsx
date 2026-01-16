@@ -18,9 +18,7 @@ export function Header() {
                 <img
                   src="/lubooking-logo.svg"
                   alt="LubooKing Logo"
-                  width="40"
-                  height="40"
-                  className="object-contain"
+                  className="w-10 h-10 object-contain"
                 />
                 <span className="bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent">
                   {APP_NAME}
