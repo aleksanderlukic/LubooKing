@@ -28,7 +28,17 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      // Check if it's an email not confirmed error
+      if (
+        error.message.includes("Email not confirmed") ||
+        error.message.includes("not confirmed")
+      ) {
+        setError(
+          "Your email is not confirmed yet. Please check your inbox for the confirmation link, or disable email confirmation in Supabase settings for development."
+        );
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
     } else {
       router.push("/dashboard");

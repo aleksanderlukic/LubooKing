@@ -24,6 +24,7 @@ async function getDashboardStats(barberId: string) {
     .eq("barber_id", barberId);
 
   const typedServices = (services || []) as Service[];
+  const activeServices = typedServices.filter((s) => s.active);
 
   const today = new Date().toISOString();
   const todayBookings = typedBookings.filter(
@@ -41,7 +42,7 @@ async function getDashboardStats(barberId: string) {
   return {
     totalBookings: typedBookings.filter((b) => b.status !== "cancelled").length,
     todayBookings,
-    totalServices: typedServices.filter((s) => s.active).length,
+    totalServices: activeServices.length,
     totalRevenue,
   };
 }

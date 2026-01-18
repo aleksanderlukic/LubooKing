@@ -16,7 +16,11 @@ export interface Database {
           slug: string;
           shop_name: string;
           address: string | null;
+          postal_code: string | null;
           city: string | null;
+          phone: string | null;
+          email: string | null;
+          bio: string | null;
           travel_enabled: boolean;
           logo_url: string | null;
           default_theme: string;
@@ -33,7 +37,11 @@ export interface Database {
           slug: string;
           shop_name: string;
           address?: string | null;
+          postal_code?: string | null;
           city?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          bio?: string | null;
           travel_enabled?: boolean;
           logo_url?: string | null;
           default_theme?: string;
@@ -50,7 +58,11 @@ export interface Database {
           slug?: string;
           shop_name?: string;
           address?: string | null;
+          postal_code?: string | null;
           city?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          bio?: string | null;
           travel_enabled?: boolean;
           logo_url?: string | null;
           default_theme?: string;
