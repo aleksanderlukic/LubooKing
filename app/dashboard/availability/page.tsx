@@ -13,6 +13,13 @@ interface Availability {
   end_time: string;
 }
 
+interface ClosedDay {
+  id: string;
+  date: string;
+  reason_type: string;
+  note: string | null;
+}
+
 const DAYS_OF_WEEK = [
   "Monday",
   "Tuesday",
@@ -30,8 +37,15 @@ export default function DashboardAvailabilityPage() {
   const [loading, setLoading] = useState(true);
   const [barberId, setBarberId] = useState("");
   const [availability, setAvailability] = useState<Availability[]>([]);
+  const [closedDays, setClosedDays] = useState<ClosedDay[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Closed day form
+  const [showClosedDayForm, setShowClosedDayForm] = useState(false);
+  const [closedDayDate, setClosedDayDate] = useState("");
+  const [closedDayReason, setClosedDayReason] = useState("closed");
+  const [closedDayNote, setClosedDayNote] = useState("");
 
   // Weekly schedule state - now supports multiple time slots per day
   const [weeklySchedule, setWeeklySchedule] = useState<{
@@ -72,6 +86,7 @@ export default function DashboardAvailabilityPage() {
 
       setBarberId(barber.id);
       await loadAvailability(barber.id);
+      await loadClosedDays(barber.id);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -89,6 +104,60 @@ export default function DashboardAvailabilityPage() {
 
     if (error) throw error;
     setAvailability(data || []);
+  }
+
+  async function loadClosedDays(id: string) {
+    const { data, error } = await (supabase.from("closed_days") as any)
+      .select("*")
+      .eq("barber_id", id)
+      .gte("date", new Date().toISOString().split("T")[0])
+      .order("date", { ascending: true });
+
+    if (error) {
+      console.error("Error loading closed days:", error);
+      return;
+    }
+    setClosedDays(data || []);
+  }
+
+  async function addClosedDay(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      const { error } = await (supabase.from("closed_days") as any).insert({
+        barber_id: barberId,
+        date: closedDayDate,
+        reason_type: closedDayReason,
+        note: closedDayNote || null,
+      });
+
+      if (error) throw error;
+
+      await loadClosedDays(barberId);
+      setShowClosedDayForm(false);
+      setClosedDayDate("");
+      setClosedDayReason("closed");
+      setClosedDayNote("");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteClosedDay(id: string) {
+    try {
+      const { error } = await (supabase.from("closed_days") as any)
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      await loadClosedDays(barberId);
+    } catch (err: any) {
+      setError(err.message);
+    }
   }
 
   async function generateWeeklySchedule() {
@@ -312,12 +381,130 @@ export default function DashboardAvailabilityPage() {
                 Generating...
               </>
             ) : (
-              <>
-                <Plus className="h-5 w-5 mr-2" />
-                Generate Availability (Next 4 Weeks)
-              </>
+              "Generate Slots"
             )}
           </Button>
+        </div>
+
+        {/* Closed Days Section */}
+        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold">Closed Days</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Mark days when you're not available (vacation, sick days, etc.)
+              </p>
+            </div>
+            <Button
+              onClick={() => setShowClosedDayForm(!showClosedDayForm)}
+              variant="outline"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Closed Day
+            </Button>
+          </div>
+
+          {showClosedDayForm && (
+            <form
+              onSubmit={addClosedDay}
+              className="mb-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg space-y-3"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">Date</label>
+                <input
+                  type="date"
+                  value={closedDayDate}
+                  onChange={(e) => setClosedDayDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full px-3 py-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Reason</label>
+                <select
+                  value={closedDayReason}
+                  onChange={(e) => setClosedDayReason(e.target.value)}
+                  className="w-full px-3 py-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                >
+                  <option value="closed">Closed</option>
+                  <option value="vacation">Vacation</option>
+                  <option value="sick">Sick Day</option>
+                  <option value="holiday">Holiday</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Note (optional)
+                </label>
+                <input
+                  type="text"
+                  value={closedDayNote}
+                  onChange={(e) => setClosedDayNote(e.target.value)}
+                  placeholder="E.g., Christmas break, Family emergency..."
+                  className="w-full px-3 py-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit" disabled={saving} size="sm">
+                  {saving ? "Adding..." : "Add"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowClosedDayForm(false);
+                    setClosedDayDate("");
+                    setClosedDayReason("closed");
+                    setClosedDayNote("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {closedDays.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No closed days scheduled
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {closedDays.map((day) => (
+                <div
+                  key={day.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{day.date}</span>
+                      <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full capitalize">
+                        {day.reason_type}
+                      </span>
+                    </div>
+                    {day.note && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {day.note}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => deleteClosedDay(day.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Current Availability */}

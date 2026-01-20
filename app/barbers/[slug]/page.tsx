@@ -21,6 +21,7 @@ type GalleryImage = Database["public"]["Tables"]["gallery_images"]["Row"];
 type BarberWithDetails = Barber & {
   services: Service[];
   gallery: GalleryImage[];
+  closedDays: any[];
 };
 
 interface BarberProfilePageProps {
@@ -62,10 +63,19 @@ async function getBarber(slug: string): Promise<BarberWithDetails | null> {
     .eq("barber_id", typedBarber.id)
     .order("display_order");
 
+  const { data: closedDays } = await supabase
+    .from("closed_days")
+    .select("*")
+    .eq("barber_id", typedBarber.id)
+    .gte("date", new Date().toISOString().split("T")[0])
+    .order("date")
+    .limit(10);
+
   return {
     ...typedBarber,
     services: (services || []) as Service[],
     gallery: (gallery || []) as GalleryImage[],
+    closedDays: closedDays || [],
   };
 }
 
@@ -184,6 +194,42 @@ export default async function BarberProfilePage({
             </div>
           )}
         </div>
+
+        {/* Closed Days - Show upcoming */}
+        {barber.closedDays && barber.closedDays.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold mb-4">Upcoming Closed Days</h2>
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="space-y-2">
+                {barber.closedDays.slice(0, 5).map((day: any) => (
+                  <div
+                    key={day.id}
+                    className="flex items-center justify-between"
+                  >
+                    <div>
+                      <span className="font-medium">
+                        {new Date(day.date).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </span>
+                      <span className="mx-2">•</span>
+                      <span className="text-sm text-amber-700 dark:text-amber-400 capitalize">
+                        {day.reason_type}
+                      </span>
+                    </div>
+                    {day.note && (
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {day.note}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Extra Section */}
         {barber.extra_section_enabled && barber.extra_section_title && (
