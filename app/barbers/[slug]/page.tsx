@@ -5,6 +5,8 @@ import { MapPin, Scissors, Clock, DollarSign, Home } from "lucide-react";
 import { formatPrice } from "@/lib/utils/booking";
 import { BookingWidget } from "@/components/booking/booking-widget";
 import { NotificationSubscribeForm } from "@/components/notifications/subscribe-form";
+import { PaymentStatusHandler } from "@/components/booking/payment-status-handler";
+import { Suspense } from "react";
 import {
   MOCK_BARBER,
   MOCK_SERVICES,
@@ -63,19 +65,26 @@ async function getBarber(slug: string): Promise<BarberWithDetails | null> {
     .eq("barber_id", typedBarber.id)
     .order("display_order");
 
-  const { data: closedDays } = await supabase
-    .from("closed_days")
-    .select("*")
-    .eq("barber_id", typedBarber.id)
-    .gte("date", new Date().toISOString().split("T")[0])
-    .order("date")
-    .limit(10);
+  // Try to fetch closed days - table might not exist yet
+  let closedDays: any[] = [];
+  try {
+    const { data } = await supabase
+      .from("closed_days")
+      .select("*")
+      .eq("barber_id", typedBarber.id)
+      .gte("date", new Date().toISOString().split("T")[0])
+      .order("date")
+      .limit(10);
+    closedDays = data || [];
+  } catch (error) {
+    console.log("Closed days table not available yet");
+  }
 
   return {
     ...typedBarber,
     services: (services || []) as Service[],
     gallery: (gallery || []) as GalleryImage[],
-    closedDays: closedDays || [],
+    closedDays,
   };
 }
 
@@ -93,6 +102,11 @@ export default async function BarberProfilePage({
 
   return (
     <div className="container mx-auto px-4 py-12">
+      {/* Payment Status Notification */}
+      <Suspense fallback={null}>
+        <PaymentStatusHandler />
+      </Suspense>
+
       <div className="max-w-6xl mx-auto">
         {/* Demo Mode Banner */}
         {isDemo && (

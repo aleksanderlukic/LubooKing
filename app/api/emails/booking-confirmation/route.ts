@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
   try {
     const { bookingId } = await request.json();
 
+    // Get base URL from request
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+
     const supabase = await createClient();
 
     // Get booking details
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest) {
         *,
         services(title, price),
         barbers(shop_name, address, city)
-      `
+      `,
       )
       .eq("id", bookingId)
       .single();
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     const typedBooking = booking as unknown as BookingWithRelations;
 
-    const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/bookings/${bookingId}/cancel?token=${typedBooking.cancellation_token}`;
+    const cancelUrl = `${baseUrl}/bookings/${bookingId}/cancel?token=${typedBooking.cancellation_token}`;
 
     // Send email
     const { data, error } = await resend.emails.send({
@@ -123,7 +128,7 @@ export async function POST(request: NextRequest) {
       console.error("Email send error:", error);
       return NextResponse.json(
         { error: "Failed to send email" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -132,7 +137,7 @@ export async function POST(request: NextRequest) {
     console.error("Error sending confirmation email:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

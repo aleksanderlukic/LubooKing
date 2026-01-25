@@ -7,16 +7,21 @@ type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await context.params;
     const { token } = await request.json();
 
+    // Get base URL from request
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+
     if (!token) {
       return NextResponse.json(
         { error: "Cancellation token is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,7 +38,7 @@ export async function POST(
     if (!booking) {
       return NextResponse.json(
         { error: "Booking not found or invalid cancellation token" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -43,7 +48,7 @@ export async function POST(
     if (typedBooking.status === "cancelled") {
       return NextResponse.json(
         { error: "Booking is already cancelled" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,7 +59,7 @@ export async function POST(
           error:
             "Bookings can only be cancelled at least 24 hours before the appointment",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -73,31 +78,25 @@ export async function POST(
     }
 
     // Send cancellation email
-    await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/emails/booking-cancellation`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: id }),
-      }
-    ).catch((err) => console.error("Failed to send cancellation email:", err));
+    await fetch(`${baseUrl}/api/emails/booking-cancellation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId: id }),
+    }).catch((err) => console.error("Failed to send cancellation email:", err));
 
     // Notify subscribers about available slot
-    await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/slot-available`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: id }),
-      }
-    ).catch((err) => console.error("Failed to notify subscribers:", err));
+    await fetch(`${baseUrl}/api/notifications/slot-available`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId: id }),
+    }).catch((err) => console.error("Failed to notify subscribers:", err));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error cancelling booking:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

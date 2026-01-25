@@ -26,7 +26,7 @@ export function PaymentSelection({
   onBack,
 }: PaymentSelectionProps) {
   const [paymentMethod, setPaymentMethod] = useState<"on-site" | "online">(
-    "on-site"
+    "on-site",
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,13 +45,37 @@ export function PaymentSelection({
       return;
     }
 
+    console.log("Full booking data:", bookingData);
+
     try {
+      // Validate required data
+      if (!bookingData.date) {
+        throw new Error("Date is required");
+      }
+      if (!bookingData.timeSlot?.start || !bookingData.timeSlot?.end) {
+        throw new Error("Time slot is required");
+      }
+
+      // timeSlot.start and timeSlot.end are already ISO datetime strings
+      // We can use them directly
+      const startsAt = bookingData.timeSlot.start;
+      const endsAt = bookingData.timeSlot.end;
+
+      console.log("Using ISO dates:", { startsAt, endsAt });
+
       const response = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...bookingData,
+          serviceId: bookingData.serviceId,
           barberId,
+          startsAt,
+          endsAt,
+          customerName: bookingData.customerName,
+          customerEmail: bookingData.customerEmail,
+          customerPhone: bookingData.customerPhone,
+          locationType: bookingData.locationType,
+          customerAddress: bookingData.customerAddress,
           paymentMethod,
         }),
       });

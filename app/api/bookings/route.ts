@@ -10,6 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Get base URL from request
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+
     // Validate input
     const validated = bookingSchema.parse(body);
 
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
           error:
             "Failed to create booking. Time slot may no longer be available.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -64,22 +69,29 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (service) {
-        // TODO: Create Stripe payment session
-        // For now, we'll just mark as pending
-        // const paymentUrl = await createStripeSession(booking.id, service.price)
-        // return NextResponse.json({ bookingId: booking.id, paymentUrl })
+        // Create Stripe checkout session
+        const checkoutResponse = await fetch(`${baseUrl}/api/stripe/checkout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: typedBooking.id }),
+        });
+
+        if (checkoutResponse.ok) {
+          const { url } = await checkoutResponse.json();
+          return NextResponse.json({
+            bookingId: typedBooking.id,
+            paymentUrl: url,
+          });
+        }
       }
     }
 
     // Send confirmation email
-    await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/emails/booking-confirmation`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: typedBooking.id }),
-      }
-    ).catch((err) => console.error("Failed to send confirmation email:", err));
+    await fetch(`${baseUrl}/api/emails/booking-confirmation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId: typedBooking.id }),
+    }).catch((err) => console.error("Failed to send confirmation email:", err));
 
     return NextResponse.json({ bookingId: typedBooking.id });
   } catch (error) {
@@ -88,7 +100,7 @@ export async function POST(request: NextRequest) {
       {
         error: error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
